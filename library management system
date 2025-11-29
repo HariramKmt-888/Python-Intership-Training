@@ -1,0 +1,68 @@
+import streamlit as st
+import pandas as pd
+import os
+DATA_FILE = "library.csv"
+if not os.path.exists(DATA_FILE):
+    df = pd.DataFrame(columns=["ID", "Title", "Author", "Category", "Quantity"])
+    df.to_csv(DATA_FILE, index=False)
+def load_data():
+    return pd.read_csv(DATA_FILE)
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+st.title("Library Management System")
+st.write( "Library system built using Streamlit.")
+menu = ["Add Book", "View Books", "Search Book", "Update Book", "Delete Book"]
+choice = st.sidebar.selectbox("Menu", menu)
+df = load_data()
+if choice == "Add Book":
+    st.subheader("Add a New Book")
+    title = st.text_input("Book Title")
+    author = st.text_input("Author")
+    category = st.text_input("Category")
+    quantity = st.number_input("Quantity", min_value=1, step=1)
+    if st.button("Add Book"):
+        if title and author and category:
+            new_id = len(df) + 1
+            new_row = {"ID": new_id, "Title": title, "Author": author,
+                       "Category": category, "Quantity": quantity}
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            save_data(df)
+            st.success(f"Book '{title}' added successfully!")
+        else:
+            st.error("Please fill all fields.")
+elif choice == "View Books":
+    st.subheader("All Books in Library")
+    st.dataframe(df)
+elif choice == "Search Book":
+    st.subheader(" Search for a Book")
+    query = st.text_input("Enter Title or Author")
+    if st.button("Search"):
+        results = df[df["Title"].str.contains(query, case=False, na=False) |
+                     df["Author"].str.contains(query, case=False, na=False)]
+        if not results.empty:
+            st.dataframe(results)
+        else:
+            st.warning("No matching book found.")
+elif choice == "Update Book":
+    st.subheader(" Update Book Details")
+    book_ids = df["ID"].tolist()
+    selected_id = st.selectbox("Select Book ID", book_ids)
+    book_data = df[df["ID"] == selected_id].iloc[0]
+    title = st.text_input("Title", book_data["Title"])
+    author = st.text_input("Author", book_data["Author"])
+    category = st.text_input("Category", book_data["Category"])
+    quantity = st.number_input("Quantity", min_value=1, step=1, value=int(book_data["Quantity"]))
+    if st.button("Update"):
+        df.loc[df["ID"] == selected_id, ["Title", "Author", "Category", "Quantity"]] = [
+            title, author, category, quantity
+        ]
+        save_data(df)
+        st.success("Book updated successfully!")
+elif choice == "Delete Book":
+    st.subheader("Delete a Book")
+    book_ids = df["ID"].tolist()
+    selected_id = st.selectbox("Select Book ID to Delete", book_ids)
+    if st.button("Delete"):
+        df = df[df["ID"] != selected_id]
+        save_data(df)
+        st.success("Book deleted successfully!")
